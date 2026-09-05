@@ -262,30 +262,17 @@ class _EditorScreenState extends State<EditorScreen>
 
   Widget _buildStatusBar() {
     final showCount = widget.storage.getShowWordCount();
-    return ValueListenableBuilder<bool>(
-      valueListenable: _showStatusBar,
-      builder: (context, show, _) {
-        return AnimatedSlide(
-          offset: Offset(0, show ? 0 : -0.1),
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOutCubic,
-          child: AnimatedOpacity(
-            opacity: show ? 1.0 : 0.0,
-            duration: const Duration(milliseconds: 200),
-            child: StatusBar(
-              title: _title,
-              wordCount: _wordCount,
-              isDark: Theme.of(context).brightness == Brightness.dark,
-              onToggleTheme: () {
-                context.read<ThemeProvider>().toggleTheme();
-              },
-              onTap: _toggleToolbar,
-              showWordCount: showCount,
-              onWordCountTap: _handleWordCountTap,
-            ),
-          ),
-        );
+    // Always visible: the theme toggle + word count are primary controls.
+    return StatusBar(
+      title: _title,
+      wordCount: _wordCount,
+      isDark: Theme.of(context).brightness == Brightness.dark,
+      onToggleTheme: () {
+        context.read<ThemeProvider>().toggleTheme();
       },
+      onTap: _toggleToolbar,
+      showWordCount: showCount,
+      onWordCountTap: _handleWordCountTap,
     );
   }
 
@@ -333,7 +320,7 @@ class _EditorScreenState extends State<EditorScreen>
             valueListenable: _toolbarVisible,
             builder: (context, toolbarOpen, _) {
               return Positioned(
-                top: 44,
+                top: 72,
                 left: 0,
                 right: 0,
                 bottom: toolbarOpen ? 360 : 0,
@@ -383,7 +370,7 @@ class _EditorScreenState extends State<EditorScreen>
           // Placeholder when empty (with toggle)
           if (_isEmptyDoc && widget.storage.getShowPlaceholder())
             Positioned(
-              top: 88,
+              top: 116,
               left: 32,
               right: 32,
               child: Center(
@@ -433,7 +420,7 @@ class _EditorScreenState extends State<EditorScreen>
 
           // Save status chip (autosave state, below status bar)
           Positioned(
-            top: 52,
+            top: 76,
             left: 0,
             right: 0,
             child: Center(
