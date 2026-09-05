@@ -139,8 +139,12 @@ class _GroupRow extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
             decoration: BoxDecoration(
-              color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              color: scheme.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: scheme.outlineVariant.withValues(alpha: 0.5),
+                width: 1,
+              ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -175,12 +179,19 @@ class _Btn extends StatelessWidget {
             height: 40,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: scheme.surface,
+              color: scheme.primaryContainer.withValues(alpha: 0.45),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: scheme.outlineVariant.withValues(alpha: 0.6),
+                color: scheme.primary.withValues(alpha: 0.35),
                 width: 1,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
             ),
             child: Icon(icon, size: 20, color: scheme.onSurface),
           ),
