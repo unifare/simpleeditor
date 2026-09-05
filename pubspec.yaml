@@ -1,0 +1,26 @@
+name: notepad
+description: A mobile-first full-screen note-taking app built with Flutter. Opens directly to a blank editor with swipe-up rich text toolbar.
+publish_to: 'none'
+version: 1.0.0
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Rich text editor
+  flutter_quill: ^11.5.1
+  # Local persistence
+  shared_preferences: ^2.2.2
+  # UUID generation
+  uuid: ^4.4.0
+  # State management
+  provider: ^6.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
