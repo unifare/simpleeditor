@@ -41,6 +41,37 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <script src="flutter_bootstrap.js" async></script>
+  <style>
+    #app-loading {
+      position: fixed; inset: 0; background: #fff; color: #555;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font: 14px/1.6 system-ui, sans-serif; z-index: 9999;
+    }
+    #app-loading .spin {
+      width: 28px; height: 28px; margin-bottom: 12px; border-radius: 50%;
+      border: 3px solid #ddd; border-top-color: #333;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+  <div id="app-loading"><div class="spin"></div><div id="app-loading-text">Notepad 加载中…</div></div>
+  <script>
+    console.log('[notepad] bootstrap start, waiting for first frame');
+    window.__notepadFirstFrame = false;
+    window.addEventListener('flutter-first-frame', function () {
+      window.__notepadFirstFrame = true;
+      console.log('[notepad] first frame rendered, removing loading');
+      var el = document.getElementById('app-loading');
+      if (el) el.remove();
+    });
+    setTimeout(function () {
+      if (!window.__notepadFirstFrame) {
+        console.warn('[notepad] no first frame after 15s; engine may be stuck (CanvasKit/WebGL?)');
+        var t = document.getElementById('app-loading-text');
+        if (t) t.textContent = '加载较慢，请稍候…（15s 未收到首帧）';
+      }
+    }, 15000);
+  </script>
+  <script src="flutter_bootstrap.js"></script>
 </body>
 </html>

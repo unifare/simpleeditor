@@ -22,7 +22,7 @@ class ThemeProvider extends ChangeNotifier {
           seedColor: const Color(0xFF007AFF),
           brightness: Brightness.light,
         ),
-        fontFamily: 'Inter',
+        fontFamily: 'Roboto',
       );
 
   ThemeData get darkTheme => ThemeData(
@@ -37,7 +37,7 @@ class ThemeProvider extends ChangeNotifier {
           seedColor: const Color(0xFF007AFF),
           brightness: Brightness.dark,
         ),
-        fontFamily: 'Inter',
+        fontFamily: 'Roboto',
       );
 
   Future<void> loadTheme() async {

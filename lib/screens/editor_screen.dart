@@ -235,8 +235,14 @@ class _EditorScreenState extends State<EditorScreen>
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
-          // Status bar overlay
-          _buildStatusBar(),
+          // Status bar overlay (Positioned: a non-Positioned child here
+          // breaks web rasterization of the whole Stack)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: _buildStatusBar(),
+          ),
 
           // Full-screen editor (key for test targeting)
           Positioned(
@@ -267,7 +273,7 @@ class _EditorScreenState extends State<EditorScreen>
                   style: TextStyle(
                     fontSize: 17,
                     height: 1.5,
-                    fontFamily: 'Inter',
+                    fontFamily: 'Roboto',
                     color: Theme.of(context).textTheme.bodyLarge?.color,
                   ),
                   decoration: InputDecoration(
