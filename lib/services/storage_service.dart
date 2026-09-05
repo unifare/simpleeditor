@@ -7,6 +7,9 @@ class Note {
   final String id;
   final String title;
   final String content;
+
+  /// Quill delta JSON (rich text). Null for plain-text notes (V1 data).
+  final String? deltaJson;
   final DateTime createdAt;
   DateTime updatedAt;
 
@@ -14,6 +17,7 @@ class Note {
     required this.id,
     required this.title,
     required this.content,
+    this.deltaJson,
     required this.createdAt,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? createdAt;
@@ -22,6 +26,7 @@ class Note {
     String? id,
     required this.title,
     required this.content,
+    this.deltaJson,
     DateTime? createdAt,
   })  : id = id ?? const Uuid().v4(),
         createdAt = createdAt ?? DateTime.now(),
@@ -31,6 +36,7 @@ class Note {
         id: json['id'] as String,
         title: json['title'] as String,
         content: json['content'] as String,
+        deltaJson: json['deltaJson'] as String?,
         createdAt: DateTime.parse(json['createdAt'] as String),
         updatedAt: json['updatedAt'] != null
             ? DateTime.parse(json['updatedAt'] as String)
@@ -41,6 +47,7 @@ class Note {
         'id': id,
         'title': title,
         'content': content,
+        if (deltaJson != null) 'deltaJson': deltaJson,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -49,6 +56,7 @@ class Note {
     String? id,
     String? title,
     String? content,
+    String? deltaJson,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -56,6 +64,7 @@ class Note {
       id: id ?? this.id,
       title: title ?? this.title,
       content: content ?? this.content,
+      deltaJson: deltaJson ?? this.deltaJson,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -94,14 +103,16 @@ class StorageService {
   }
 
   // --- Note content auto-save ---
-  Future<void> saveNoteContent(String content) async {
+  Future<void> saveNoteContent(String content, {String? deltaJson}) async {
     final note = await getCurrentNote();
     if (note == null) {
-      final newNote = Note.create(title: '', content: content);
+      final newNote = Note.create(
+          title: '', content: content, deltaJson: deltaJson);
       await saveCurrentNote(newNote);
     } else {
       final updated = note.copyWith(
         content: content,
+        deltaJson: deltaJson,
         title: _deriveTitle(content),
         updatedAt: DateTime.now(),
       );

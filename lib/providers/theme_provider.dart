@@ -12,14 +12,14 @@ class ThemeProvider extends ChangeNotifier {
 
   ThemeData get lightTheme => ThemeData(
         brightness: Brightness.light,
-        scaffoldBackgroundColor: Colors.white,
+        scaffoldBackgroundColor: const Color(0xFFF4F2FF),
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.transparent,
           foregroundColor: Color(0xFF000000),
           elevation: 0,
         ),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF007AFF),
+          seedColor: const Color(0xFF6D5CFF),
           brightness: Brightness.light,
         ),
         fontFamily: 'Roboto',
@@ -27,14 +27,14 @@ class ThemeProvider extends ChangeNotifier {
 
   ThemeData get darkTheme => ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF000000),
+        scaffoldBackgroundColor: const Color(0xFF0B0B14),
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.transparent,
           foregroundColor: Color(0xFFFFFFFF),
           elevation: 0,
         ),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF007AFF),
+          seedColor: const Color(0xFF8B7CFF),
           brightness: Brightness.dark,
         ),
         fontFamily: 'Roboto',

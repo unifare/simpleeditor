@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// Rich text formatting toolbar that slides up from the bottom of the screen.
-/// Buttons: Bold, Italic, Underline, List, Heading, Link, Monospace, Image
+/// Modern bottom toolbar: full-width, rounded top, three grouped rows.
+/// Groups: Format (B/I/U/list/H) · Insert (link/mono/image) · Edit (undo/redo/copy/paste/save)
 class RichTextToolbar extends StatelessWidget {
   final void Function(String format) onFormat;
   final VoidCallback onClose;
@@ -16,81 +16,92 @@ class RichTextToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = Theme.of(context).colorScheme.surface;
-    final outline = Theme.of(context).colorScheme.outlineVariant;
+    final scheme = Theme.of(context).colorScheme;
+    final bg = scheme.surface;
+    final outline = scheme.outlineVariant;
 
     return Container(
-      padding: const EdgeInsets.only(top: 12, bottom: 32),
+      width: double.infinity,
+      padding: EdgeInsets.only(
+        top: 10,
+        bottom: 28 + MediaQuery.of(context).padding.bottom,
+        left: 16,
+        right: 16,
+      ),
       decoration: BoxDecoration(
-        color: bgColor,
-        border: Border(
-          top: BorderSide(color: outline, width: 1),
-        ),
+        color: bg,
+        border: Border(top: BorderSide(color: outline, width: 1)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 12,
-            offset: const Offset(0, -4),
+            color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, -8),
           ),
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Drag handle
-          Container(
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Theme.of(context).hintColor.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 8,
-            runSpacing: 16,
+          // Drag handle + close
+          Stack(
+            alignment: Alignment.center,
             children: [
-              _ToolbarButton(
-                icon: Icons.format_bold,
-                label: 'B',
-                onTap: () => onFormat('bold'),
+              Container(
+                width: 40,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).hintColor.withValues(alpha: 0.35),
+                  borderRadius: BorderRadius.circular(3),
+                ),
               ),
-              _ToolbarButton(
-                icon: Icons.format_italic,
-                label: 'I',
-                onTap: () => onFormat('italic'),
+              Positioned(
+                right: 0,
+                child: InkWell(
+                  onTap: onClose,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 22,
+                      color: Theme.of(context).hintColor,
+                    ),
+                  ),
+                ),
               ),
-              _ToolbarButton(
-                icon: Icons.format_underline,
-                label: 'U',
-                onTap: () => onFormat('underline'),
-              ),
-              _ToolbarButton(
-                icon: Icons.format_list_bulleted,
-                label: '\u2022',
-                onTap: () => onFormat('list'),
-              ),
-              _ToolbarButton(
-                icon: Icons.format_size,
-                label: 'H',
-                onTap: () => onFormat('heading'),
-              ),
-              _ToolbarButton(
-                icon: Icons.link,
-                label: '@',
-                onTap: () => onFormat('link'),
-              ),
-              _ToolbarButton(
-                icon: Icons.code,
-                label: 'M',
-                onTap: () => onFormat('mono'),
-              ),
-              _ToolbarButton(
-                icon: Icons.image,
-                label: '[]',
-                onTap: () => onFormat('image'),
-              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          _GroupRow(
+            label: 'Style',
+            children: [
+              _Btn(icon: Icons.format_bold_rounded, tip: 'Bold', onTap: () => onFormat('bold')),
+              _Btn(icon: Icons.format_italic_rounded, tip: 'Italic', onTap: () => onFormat('italic')),
+              _Btn(icon: Icons.format_underline_rounded, tip: 'Underline', onTap: () => onFormat('underline')),
+              _Btn(icon: Icons.format_list_bulleted_rounded, tip: 'List', onTap: () => onFormat('list')),
+              _Btn(icon: Icons.title_rounded, tip: 'Heading', onTap: () => onFormat('heading')),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _GroupRow(
+            label: 'Insert',
+            children: [
+              _Btn(icon: Icons.link_rounded, tip: 'Link', onTap: () => onFormat('link')),
+              _Btn(icon: Icons.code_rounded, tip: 'Code', onTap: () => onFormat('mono')),
+              _Btn(icon: Icons.image_outlined, tip: 'Image', onTap: () => onFormat('image')),
+              _Btn(icon: Icons.content_copy_rounded, tip: 'Copy', onTap: () => onFormat('copy')),
+              _Btn(icon: Icons.content_paste_rounded, tip: 'Paste', onTap: () => onFormat('paste')),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _GroupRow(
+            label: 'Edit',
+            children: [
+              _Btn(icon: Icons.undo_rounded, tip: 'Undo', onTap: () => onFormat('undo')),
+              _Btn(icon: Icons.redo_rounded, tip: 'Redo', onTap: () => onFormat('redo')),
+              _Btn(icon: Icons.save_outlined, tip: 'Save', onTap: () => onFormat('save')),
+              _Btn(icon: Icons.select_all_rounded, tip: 'Select all', onTap: () => onFormat('selectAll')),
             ],
           ),
         ],
@@ -99,45 +110,79 @@ class RichTextToolbar extends StatelessWidget {
   }
 }
 
-class _ToolbarButton extends StatelessWidget {
-  final IconData icon;
+class _GroupRow extends StatelessWidget {
   final String label;
-  final VoidCallback onTap;
+  final List<Widget> children;
 
-  const _ToolbarButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
+  const _GroupRow({required this.label, required this.children});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 48,
-      height: 56,
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        SizedBox(
+          width: 40,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).hintColor,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.visible,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: children,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Btn extends StatelessWidget {
+  final IconData icon;
+  final String tip;
+  final VoidCallback onTap;
+
+  const _Btn({required this.icon, required this.tip, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: tip,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 20,
-                color: Theme.of(context).colorScheme.onSurface,
+          child: Container(
+            width: 44,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: scheme.outlineVariant.withValues(alpha: 0.6),
+                width: 1,
               ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: Theme.of(context).hintColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+            ),
+            child: Icon(icon, size: 20, color: scheme.onSurface),
           ),
         ),
       ),
