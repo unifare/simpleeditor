@@ -10,6 +10,9 @@ class Note {
 
   /// Quill delta JSON (rich text). Null for plain-text notes (V1 data).
   final String? deltaJson;
+
+  /// Composer language tag (text/md/js/json/html/...). Null = plain text.
+  final String? lang;
   final DateTime createdAt;
   DateTime updatedAt;
 
@@ -18,6 +21,7 @@ class Note {
     required this.title,
     required this.content,
     this.deltaJson,
+    this.lang,
     required this.createdAt,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? createdAt;
@@ -27,6 +31,7 @@ class Note {
     required this.title,
     required this.content,
     this.deltaJson,
+    this.lang,
     DateTime? createdAt,
   })  : id = id ?? const Uuid().v4(),
         createdAt = createdAt ?? DateTime.now(),
@@ -37,6 +42,7 @@ class Note {
         title: json['title'] as String,
         content: json['content'] as String,
         deltaJson: json['deltaJson'] as String?,
+        lang: json['lang'] as String?,
         createdAt: DateTime.parse(json['createdAt'] as String),
         updatedAt: json['updatedAt'] != null
             ? DateTime.parse(json['updatedAt'] as String)
@@ -48,6 +54,7 @@ class Note {
         'title': title,
         'content': content,
         if (deltaJson != null) 'deltaJson': deltaJson,
+        if (lang != null) 'lang': lang,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -57,6 +64,7 @@ class Note {
     String? title,
     String? content,
     String? deltaJson,
+    String? lang,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -65,6 +73,7 @@ class Note {
       title: title ?? this.title,
       content: content ?? this.content,
       deltaJson: deltaJson ?? this.deltaJson,
+      lang: lang ?? this.lang,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -228,5 +237,31 @@ class StorageService {
   Future<void> saveAllNotes(List<Note> notes) async {
     final list = notes.map((n) => jsonEncode(n.toJson())).toList();
     await _prefs.setStringList(_notesListKey, list);
+  }
+
+  Future<List<Note>> addNote(Note note) async {
+    final notes = await getAllNotes();
+    notes.insert(0, note);
+    await saveAllNotes(notes);
+    return notes;
+  }
+
+  Future<List<Note>> updateNote(Note note) async {
+    final notes = await getAllNotes();
+    final i = notes.indexWhere((n) => n.id == note.id);
+    if (i >= 0) {
+      notes[i] = note;
+    } else {
+      notes.insert(0, note);
+    }
+    await saveAllNotes(notes);
+    return notes;
+  }
+
+  Future<List<Note>> removeNote(String id) async {
+    final notes = await getAllNotes();
+    notes.removeWhere((n) => n.id == id);
+    await saveAllNotes(notes);
+    return notes;
   }
 }
