@@ -74,6 +74,9 @@ class Note {
 class StorageService {
   static const String _currentNoteKey = 'current_note';
   static const String _notesListKey = 'notes_list';
+  static const String _historyKey = 'note_history';
+  static const int _historyCap = 30;
+  static const Duration _historyMinGap = Duration(seconds: 60);
   static const String _themeKey = 'theme_mode';
   static const String _toolbarStyleKey = 'toolbar_style';
   static const String _showPlaceholderKey = 'show_placeholder';
@@ -159,6 +162,58 @@ class StorageService {
   bool getShowWordCount() => _prefs.getBool(_showWordCountKey) ?? true;
   Future<void> saveShowWordCount(bool enabled) async {
     await _prefs.setBool(_showWordCountKey, enabled);
+  }
+
+  // --- History (snapshots of past content) ---
+  Future<List<Note>> getHistory() async {
+    final list = _prefs.getStringList(_historyKey) ?? [];
+    final notes = <Note>[];
+    for (final jsonStr in list) {
+      try {
+        notes.add(Note.fromJson(jsonDecode(jsonStr) as Map<String, dynamic>));
+      } catch (_) {}
+    }
+    notes.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return notes;
+  }
+
+  Future<void> _saveHistory(List<Note> notes) async {
+    final capped = notes.take(_historyCap).toList();
+    final list = capped.map((n) => jsonEncode(n.toJson())).toList();
+    await _prefs.setStringList(_historyKey, list);
+  }
+
+  /// Record a snapshot unless identical to the latest or within the
+  /// throttle window (explicit saves use [force] to bypass the window).
+  /// Trivial content (< 2 chars) is never snapshotted.
+  Future<List<Note>> recordSnapshot(String content,
+      {String? deltaJson, bool force = false}) async {
+    if (content.trim().length < 2) return getHistory();
+    final history = await getHistory();
+    final now = DateTime.now();
+    if (history.isNotEmpty) {
+      final latest = history.first;
+      if (latest.content == content) return history;
+      if (!force && now.difference(latest.updatedAt) < _historyMinGap) {
+        return history;
+      }
+    }
+    final entry = Note.create(
+      title: _deriveTitle(content),
+      content: content,
+      deltaJson: deltaJson,
+      createdAt: now,
+    );
+    history.insert(0, entry);
+    await _saveHistory(history);
+    return history.take(_historyCap).toList();
+  }
+
+  Future<List<Note>> deleteHistoryEntry(String id) async {
+    final history = await getHistory();
+    history.removeWhere((n) => n.id == id);
+    await _saveHistory(history);
+    return history;
   }
 
   // --- All notes ---

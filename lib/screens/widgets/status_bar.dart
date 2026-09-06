@@ -10,6 +10,7 @@ class StatusBar extends StatelessWidget implements PreferredSizeWidget {
   final bool isDark;
   final VoidCallback onToggleTheme;
   final VoidCallback onTap;
+  final VoidCallback onHistoryTap;
   final bool showWordCount;
   final VoidCallback onWordCountTap;
 
@@ -19,6 +20,7 @@ class StatusBar extends StatelessWidget implements PreferredSizeWidget {
     required this.isDark,
     required this.onToggleTheme,
     required this.onTap,
+    required this.onHistoryTap,
     required this.showWordCount,
     required this.onWordCountTap,
     super.key,
@@ -100,6 +102,24 @@ class StatusBar extends StatelessWidget implements PreferredSizeWidget {
                       ),
                     ),
                   ),
+                const SizedBox(width: 8),
+                // History button (tonal, always legible)
+                Material(
+                  color: scheme.primaryContainer.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(12),
+                  child: InkWell(
+                    onTap: onHistoryTap,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(9),
+                      child: Icon(
+                        Icons.history_rounded,
+                        size: 18,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                  ),
+                ),
                 const SizedBox(width: 8),
                 // Solid theme button — never washed out
                 Material(

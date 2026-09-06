@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/theme_provider.dart';
 import '../services/storage_service.dart';
+import 'widgets/history_panel.dart';
 import 'widgets/rich_text_toolbar.dart';
 import 'widgets/status_bar.dart';
 import 'widgets/tweaks_panel.dart';
@@ -45,6 +46,8 @@ class _EditorScreenState extends State<EditorScreen>
   String _lastSavedPlain = '';
   String _saveLabel = 'Loaded · autosave on';
   bool _saving = false;
+  List<Note> _history = [];
+  bool _showHistory = false;
 
   @override
   void initState() {
@@ -60,7 +63,14 @@ class _EditorScreenState extends State<EditorScreen>
     );
 
     _loadNote();
+    _loadHistory();
     _scrollController.addListener(_onScroll);
+  }
+
+  Future<void> _loadHistory() async {
+    final history = await widget.storage.getHistory();
+    if (!mounted) return;
+    setState(() => _history = history);
   }
 
   /// Plain text of the document (single source for title/count/empty/save).
@@ -111,6 +121,8 @@ class _EditorScreenState extends State<EditorScreen>
       final deltaJson =
           jsonEncode(controller.document.toDelta().toJson());
       await widget.storage.saveNoteContent(snapshot, deltaJson: deltaJson);
+      // Note: snapshots are recorded on explicit save only, so mid-typing
+      // auto-saves don't pollute history with partial text.
       if (!mounted) return;
       final now = DateTime.now();
       final hh = now.hour.toString().padLeft(2, '0');
@@ -131,6 +143,8 @@ class _EditorScreenState extends State<EditorScreen>
     _lastSavedPlain = text;
     final deltaJson = jsonEncode(controller.document.toDelta().toJson());
     await widget.storage.saveNoteContent(text, deltaJson: deltaJson);
+    final history = await widget.storage
+        .recordSnapshot(text, deltaJson: deltaJson, force: true);
     if (!mounted) return;
     final now = DateTime.now();
     final hh = now.hour.toString().padLeft(2, '0');
@@ -138,8 +152,55 @@ class _EditorScreenState extends State<EditorScreen>
     final ss = now.second.toString().padLeft(2, '0');
     setState(() {
       _saving = false;
+      _history = history;
       _saveLabel = 'Saved $hh:$mm:$ss';
     });
+  }
+
+  // --- History actions ---
+
+  Future<void> _copyHistoryEntry(Note entry) async {
+    if (entry.content.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: entry.content));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Copied'), duration: Duration(seconds: 1)),
+    );
+  }
+
+  /// Restore a history snapshot into the editor (as a new edit).
+  Future<void> _restoreHistoryEntry(Note entry) async {
+    Document doc;
+    if (entry.deltaJson != null) {
+      try {
+        doc = Document.fromJson(
+            jsonDecode(entry.deltaJson!) as List<dynamic>);
+      } catch (_) {
+        doc = Document()..insert(0, entry.content);
+      }
+    } else {
+      doc = Document()..insert(0, entry.content);
+    }
+    final old = _controller;
+    final controller = QuillController(
+      document: doc,
+      selection: TextSelection.collapsed(offset: doc.length - 1),
+    );
+    controller.addListener(_onDocChanged);
+    old?.dispose();
+    setState(() {
+      _controller = controller;
+      _showHistory = false;
+    });
+    _updateMetadata(_plainText);
+    await _saveNow();
+    if (mounted) _focusNode.requestFocus();
+  }
+
+  Future<void> _deleteHistoryEntry(Note entry) async {
+    final history = await widget.storage.deleteHistoryEntry(entry.id);
+    if (!mounted) return;
+    setState(() => _history = history);
   }
 
   void _updateMetadata(String content) {
@@ -277,6 +338,10 @@ class _EditorScreenState extends State<EditorScreen>
       onTap: _toggleToolbar,
       showWordCount: showCount,
       onWordCountTap: _handleWordCountTap,
+      onHistoryTap: () {
+        if (_toolbarVisible.value) _closeToolbar();
+        setState(() => _showHistory = !_showHistory);
+      },
     );
   }
 
@@ -474,6 +539,22 @@ class _EditorScreenState extends State<EditorScreen>
               ),
             ),
           ),
+
+          // History dropdown (below status bar, fixed max height)
+          if (_showHistory)
+            Positioned(
+              top: 108,
+              left: 12,
+              right: 12,
+              child: HistoryPanel(
+                entries: _history,
+                onCopy: _copyHistoryEntry,
+                onRestore: _restoreHistoryEntry,
+                onDelete: _deleteHistoryEntry,
+                onDismiss: () =>
+                    setState(() => _showHistory = false),
+              ),
+            ),
 
           // Toolbar (slides up from bottom, always full screen width)
           ValueListenableBuilder<bool>(
