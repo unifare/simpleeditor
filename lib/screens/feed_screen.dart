@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../providers/theme_provider.dart';
 import '../services/storage_service.dart';
 import 'fullscreen_editor.dart';
+import 'widgets/backup_sheet.dart';
 import 'widgets/preview_segments.dart';
 
 const Map<String, String> kLanguages = {
@@ -172,6 +175,123 @@ class _FeedScreenState extends State<FeedScreen> {
   void _cancelEdit() {
     setState(() => _editingId = null);
     _input.clear();
+  }
+
+  // --- Backup: export / import ---
+
+  String _stamp() {
+    final now = DateTime.now();
+    String p(int v) => v.toString().padLeft(2, '0');
+    return '${now.year}${p(now.month)}${p(now.day)}-${p(now.hour)}${p(now.minute)}';
+  }
+
+  Future<void> _shareTextFile(
+      String content, String filename, String mime) async {
+    try {
+      final file = XFile.fromData(
+        Uint8List.fromList(content.codeUnits),
+        name: filename,
+        mimeType: mime,
+      );
+      await SharePlus.instance.share(
+        ShareParams(files: [file], text: 'Notepad backup'),
+      );
+    } catch (_) {
+      // No share target (desktop/web w/o picker): fall back to clipboard.
+      if (_input.text.isEmpty && content.length < 200000) {
+        await Clipboard.setData(ClipboardData(text: content));
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Share unavailable — copied instead'),
+            duration: Duration(seconds: 2)),
+      );
+    }
+  }
+
+  Future<void> _exportJson() async {
+    if (_notes.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Nothing to export'),
+            duration: Duration(seconds: 1)),
+      );
+      return;
+    }
+    await _shareTextFile(
+      widget.storage.exportJson(_notes),
+      'notepad-backup-${_stamp()}.json',
+      'application/json',
+    );
+  }
+
+  Future<void> _exportMarkdown() async {
+    if (_notes.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Nothing to export'),
+            duration: Duration(seconds: 1)),
+      );
+      return;
+    }
+    await _shareTextFile(
+      widget.storage.exportMarkdown(_notes),
+      'notepad-backup-${_stamp()}.md',
+      'text/markdown',
+    );
+  }
+
+  Future<void> _importJson() async {
+    try {
+      final files = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+      );
+      if (files.isEmpty) return; // cancelled
+      final bytes = await files.single.readAsBytes();
+      final merged = await widget.storage
+          .importJson(String.fromCharCodes(bytes));
+      if (!mounted) return;
+      setState(() => _notes = merged);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Imported — ${merged.length} notes total'),
+            duration: const Duration(seconds: 2)),
+      );
+    } on FormatException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Import failed: ${e.message}'),
+            duration: const Duration(seconds: 2)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Import failed'),
+            duration: Duration(seconds: 2)),
+      );
+    }
+  }
+
+  void _openBackupSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => BackupSheet(
+        noteCount: _notes.length,
+        onExportJson: _exportJson,
+        onExportMarkdown: _exportMarkdown,
+        onImportJson: _importJson,
+      ),
+    );
   }
 
   /// Open the fullscreen studio; apply its result (draft or send).
@@ -351,6 +471,25 @@ class _FeedScreenState extends State<FeedScreen> {
                 ),
               ),
               const Spacer(),
+              // Backup (export / import)
+              Material(
+                color: scheme.primaryContainer
+                    .withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(12),
+                child: InkWell(
+                  onTap: _openBackupSheet,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(9),
+                    child: Icon(
+                      Icons.backup_outlined,
+                      size: 18,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
               Material(
                 color: scheme.primary,
                 borderRadius: BorderRadius.circular(12),

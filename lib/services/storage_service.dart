@@ -264,4 +264,63 @@ class StorageService {
     await saveAllNotes(notes);
     return notes;
   }
+
+  // --- Backup: export / import ---
+
+  /// Full backup payload (all notes + metadata).
+  String exportJson(List<Note> notes) => jsonEncode({
+        'app': 'notepad',
+        'version': 1,
+        'exportedAt': DateTime.now().toIso8601String(),
+        'notes': notes.map((n) => n.toJson()).toList(),
+      });
+
+  /// Human-readable backup: one section per note.
+  String exportMarkdown(List<Note> notes) {
+    final buf = StringBuffer();
+    buf.writeln('# Notepad Backup (${notes.length} notes)');
+    buf.writeln();
+    for (final n in notes) {
+      final t = n.updatedAt;
+      final mm = t.month.toString().padLeft(2, '0');
+      final dd = t.day.toString().padLeft(2, '0');
+      final hh = t.hour.toString().padLeft(2, '0');
+      final min = t.minute.toString().padLeft(2, '0');
+      buf.writeln('## ${n.title}');
+      buf.writeln();
+      buf.writeln('_${n.lang ?? 'text'} · $mm-$dd $hh:${min}_');
+      buf.writeln();
+      buf.writeln(n.content);
+      buf.writeln();
+      buf.writeln('---');
+      buf.writeln();
+    }
+    return buf.toString();
+  }
+
+  /// Merge a backup payload in (newer updatedAt wins per id).
+  /// Throws [FormatException] on invalid payload.
+  Future<List<Note>> importJson(String raw) async {
+    final map = jsonDecode(raw) as Map<String, dynamic>;
+    if (map['app'] != 'notepad' || map['notes'] is! List) {
+      throw const FormatException('Not a Notepad backup file');
+    }
+    final incoming = (map['notes'] as List)
+        .map((e) => Note.fromJson(e as Map<String, dynamic>))
+        .toList();
+    final byId = <String, Note>{};
+    for (final n in await getAllNotes()) {
+      byId[n.id] = n;
+    }
+    for (final n in incoming) {
+      final cur = byId[n.id];
+      if (cur == null || n.updatedAt.isAfter(cur.updatedAt)) {
+        byId[n.id] = n;
+      }
+    }
+    final merged = byId.values.toList()
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    await saveAllNotes(merged);
+    return merged;
+  }
 }

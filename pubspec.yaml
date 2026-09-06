@@ -19,6 +19,8 @@ dependencies:
   image_picker: ^1.2.3
   flutter_markdown: ^0.7.7+1
   flutter_widget_from_html_core: ^0.17.3
+  share_plus: ^13.3.0
+  file_picker: ^12.2.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

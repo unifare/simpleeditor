@@ -1,8 +1,16 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:notepad/services/storage_service.dart';
+
+Future<StorageService> _storage() async {
+  SharedPreferences.setMockInitialValues({});
+  final s = StorageService();
+  await s.init();
+  return s;
+}
 
 void main() {
   test('Word count works correctly', () {
@@ -55,6 +63,54 @@ void main() {
     final updated = note.copyWith(content: 'c2');
     expect(updated.deltaJson, 'd');
     expect(updated.content, 'c2');
+  });
+
+  test('Backup JSON round-trip preserves notes', () async {
+    final storage = await _storage();
+    final n1 = Note.create(
+        title: 'one', content: 'hello', lang: 'md');
+    final n2 = Note.create(
+        title: 'two', content: '<b>x</b>', lang: 'html');
+    final payload = storage.exportJson([n1, n2]);
+    final decoded = jsonDecode(payload) as Map<String, dynamic>;
+    expect(decoded['app'], 'notepad');
+    expect((decoded['notes'] as List), hasLength(2));
+
+    final merged = await storage.importJson(payload);
+    expect(merged, hasLength(2));
+    expect(
+        merged.map((n) => n.content),
+        containsAll(['hello', '<b>x</b>']));
+  });
+
+  test('Import merges: newer updatedAt wins, bad file throws',
+      () async {
+    final storage = await _storage();
+    final old = Note.create(title: 't', content: 'v1');
+    await storage.addNote(old);
+    final newer = old.copyWith(
+      content: 'v2',
+      updatedAt: DateTime.now().add(const Duration(minutes: 5)),
+    );
+    final merged = await storage
+        .importJson(storage.exportJson([newer]));
+    expect(merged, hasLength(1));
+    expect(merged.first.content, 'v2');
+
+    expect(
+      storage.importJson('{"nope":true}'),
+      throwsA(isA<FormatException>()),
+    );
+  });
+
+  test('Backup Markdown contains titles and contents', () async {
+    final storage = await _storage();
+    final md = storage.exportMarkdown([
+      Note.create(title: 'Shopping', content: '- eggs', lang: 'md'),
+    ]);
+    expect(md, contains('# Notepad Backup (1 notes)'));
+    expect(md, contains('## Shopping'));
+    expect(md, contains('- eggs'));
   });
 }
 
