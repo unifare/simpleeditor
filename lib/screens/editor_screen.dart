@@ -263,12 +263,16 @@ class _EditorScreenState extends State<EditorScreen>
   Widget _buildStatusBar() {
     final showCount = widget.storage.getShowWordCount();
     // Always visible: the theme toggle + word count are primary controls.
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return StatusBar(
       title: _title,
       wordCount: _wordCount,
-      isDark: Theme.of(context).brightness == Brightness.dark,
+      isDark: isDark,
       onToggleTheme: () {
-        context.read<ThemeProvider>().toggleTheme();
+        // Flip relative to what is actually shown (works from system too).
+        context.read<ThemeProvider>().setTheme(
+              isDark ? ThemeMode.light : ThemeMode.dark,
+            );
       },
       onTap: _toggleToolbar,
       showWordCount: showCount,
@@ -375,9 +379,9 @@ class _EditorScreenState extends State<EditorScreen>
               right: 32,
               child: Center(
                 child: Text(
-                  'Start writing \u2026',
-                  style: TextStyle(
-                    color: Theme.of(context).hintColor,
+                    'Start writing \u2026',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 17,
                     height: 1.5,
                   ),
@@ -398,7 +402,7 @@ class _EditorScreenState extends State<EditorScreen>
                     Text(
                       'Swipe up for tools',
                       style: TextStyle(
-                        color: Theme.of(context).hintColor,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 12,
                       ),
                     ),
@@ -408,8 +412,9 @@ class _EditorScreenState extends State<EditorScreen>
                       height: 4,
                       decoration: BoxDecoration(
                     color: Theme.of(context)
-                            .hintColor
-                            .withValues(alpha: 0.3),
+                            .colorScheme
+                            .onSurfaceVariant
+                            .withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -460,7 +465,7 @@ class _EditorScreenState extends State<EditorScreen>
                       _saving ? 'Saving…' : _saveLabel,
                       style: TextStyle(
                         fontSize: 11,
-                        color: Theme.of(context).hintColor,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -512,11 +517,14 @@ class _EditorScreenState extends State<EditorScreen>
   Widget _quillEditor() {
     final controller = _controller;
     if (controller == null) return const SizedBox.shrink();
+    // Explicit text color: Quill's merged paragraph style would otherwise
+    // resolve dark on a dark card.
+    final bodyColor = Theme.of(context).colorScheme.onSurface;
     return QuillEditor.basic(
       controller: controller,
       focusNode: _focusNode,
       scrollController: _scrollController,
-      config: const QuillEditorConfig(
+      config: QuillEditorConfig(
         padding: EdgeInsets.zero,
         autoFocus: false,
         expands: false,
@@ -526,10 +534,11 @@ class _EditorScreenState extends State<EditorScreen>
               fontSize: 17,
               height: 1.5,
               fontFamily: 'Roboto',
+              color: bodyColor,
             ),
-            HorizontalSpacing(0, 0),
-            VerticalSpacing(0, 0),
-            VerticalSpacing(0, 0),
+            const HorizontalSpacing(0, 0),
+            const VerticalSpacing(0, 0),
+            const VerticalSpacing(0, 0),
             null,
           ),
         ),

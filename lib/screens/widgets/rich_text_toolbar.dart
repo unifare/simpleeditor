@@ -51,7 +51,7 @@ class RichTextToolbar extends StatelessWidget {
                 width: 40,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).hintColor.withValues(alpha: 0.35),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(3),
                 ),
               ),
@@ -65,7 +65,7 @@ class RichTextToolbar extends StatelessWidget {
                     child: Icon(
                       Icons.keyboard_arrow_down_rounded,
                       size: 22,
-                      color: Theme.of(context).hintColor,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ),
@@ -128,7 +128,7 @@ class _GroupRow extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: Theme.of(context).hintColor,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
             maxLines: 1,
             overflow: TextOverflow.visible,

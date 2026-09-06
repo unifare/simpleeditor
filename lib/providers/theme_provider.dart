@@ -52,10 +52,14 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   void toggleTheme() {
-    if (_themeMode == ThemeMode.light) {
+    if (_themeMode == ThemeMode.dark) {
+      setTheme(ThemeMode.light);
+    } else if (_themeMode == ThemeMode.light) {
       setTheme(ThemeMode.dark);
     } else {
-      setTheme(ThemeMode.light);
+      // System mode: flip relative to the current brightness is handled
+      // by the caller via setTheme; default to dark here.
+      setTheme(ThemeMode.dark);
     }
   }
 }
