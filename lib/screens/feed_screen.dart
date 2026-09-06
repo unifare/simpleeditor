@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/storage_service.dart';
 import 'fullscreen_editor.dart';
+import 'widgets/preview_segments.dart';
 
 const Map<String, String> kLanguages = {
   'text': 'Text',
@@ -622,25 +623,13 @@ class _FeedScreenState extends State<FeedScreen> {
               const SizedBox(width: 8),
               // Preview segment
               Expanded(
-                child: SegmentedButton<PreviewMode>(
-                  style: SegmentedButton.styleFrom(
-                    visualDensity: const VisualDensity(
-                        horizontal: -2, vertical: -2),
-                    textStyle: const TextStyle(fontSize: 10),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: PreviewSegments(
+                    value: _preview,
+                    onChanged: (m) =>
+                        setState(() => _preview = m),
                   ),
-                  segments: const [
-                    ButtonSegment(
-                        value: PreviewMode.edit,
-                        label: Text('Edit')),
-                    ButtonSegment(
-                        value: PreviewMode.md, label: Text('MD')),
-                    ButtonSegment(
-                        value: PreviewMode.html,
-                        label: Text('HTML')),
-                  ],
-                  selected: {_preview},
-                  onSelectionChanged: (s) =>
-                      setState(() => _preview = s.first),
                 ),
               ),
               const SizedBox(width: 8),

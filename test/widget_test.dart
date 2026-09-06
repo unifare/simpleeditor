@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -102,5 +103,42 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('0 notes'), findsOneWidget);
     expect(await storage.getAllNotes(), isEmpty);
+  });
+
+  testWidgets('PreviewSegments switches MD and HTML',
+      (WidgetTester tester) async {
+    final storage = await _readyStorage();
+    await tester.pumpWidget(_app(storage));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('MD'));
+    await tester.pumpAndSettle();
+    expect(find.byType(MarkdownBody), findsOneWidget);
+
+    await tester.tap(find.text('HTML'));
+    await tester.pumpAndSettle();
+    // HTML preview replaces the markdown preview.
+    expect(find.byType(MarkdownBody), findsNothing);
+  });
+
+  testWidgets('Fullscreen studio MD preview renders',
+      (WidgetTester tester) async {
+    final storage = await _readyStorage();
+    await tester.pumpWidget(_app(storage));
+    await tester.pumpAndSettle();
+
+    // Open fullscreen via the expand button in the md bar.
+    await tester.tap(find.byIcon(Icons.open_in_full_rounded));
+    await tester.pumpAndSettle();
+    expect(find.text('Fullscreen'), findsOneWidget);
+
+    await tester.enterText(
+        find.descendant(
+            of: find.byType(Column), matching: find.byType(TextField)),
+        '# Big');
+    await tester.pump();
+    await tester.tap(find.text('MD').last);
+    await tester.pumpAndSettle();
+    expect(find.byType(MarkdownBody), findsOneWidget);
   });
 }

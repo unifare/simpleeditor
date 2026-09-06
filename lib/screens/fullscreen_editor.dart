@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 
-import 'feed_screen.dart' show kLanguages;
+import 'feed_screen.dart' show kLanguages, PreviewMode;
+import 'widgets/preview_segments.dart';
 
 /// Fullscreen creation & code studio (fig-2 style):
 /// language dropdown, copy/paste/send, markdown bar, line numbers,
@@ -37,6 +40,7 @@ class _FullscreenEditorPageState extends State<FullscreenEditorPage> {
   bool _showFind = false;
   final TextEditingController _find = TextEditingController();
   String? _findMiss;
+  PreviewMode _preview = PreviewMode.edit;
 
   @override
   void initState() {
@@ -160,7 +164,6 @@ class _FullscreenEditorPageState extends State<FullscreenEditorPage> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       body: Container(
@@ -178,90 +181,175 @@ class _FullscreenEditorPageState extends State<FullscreenEditorPage> {
             children: [
               _studioBar(context),
               _mdBar(context),
-              if (_showFind) _findBar(context),
-              // Code area with line-number gutter
+              _previewBar(context),
+              if (_showFind &&
+                  _preview == PreviewMode.edit)
+                _findBar(context),
+              // Code area (editor with gutter) or live preview
               Expanded(
-                child: Container(
-                  margin: const EdgeInsets.fromLTRB(12, 4, 12, 0),
-                  decoration: BoxDecoration(
-                    color: scheme.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: scheme.outlineVariant,
-                    ),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Gutter
-                        Container(
-                          width: 44,
-                          decoration: BoxDecoration(
-                            color: scheme.surfaceContainerHighest
-                                .withValues(alpha: 0.5),
-                            border: Border(
-                              right: BorderSide(
-                                  color: scheme.outlineVariant),
-                            ),
-                          ),
-                          child: ListView.builder(
-                            controller: _gutterScroll,
-                            physics:
-                                const NeverScrollableScrollPhysics(),
-                            padding:
-                                const EdgeInsets.only(top: 10),
-                            itemCount: _lineCount,
-                            itemBuilder: (_, i) => SizedBox(
-                              height: 21,
-                              child: Center(
-                                child: Text(
-                                  '${i + 1}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: scheme.onSurfaceVariant,
-                                    fontFamily: 'Roboto Mono',
-                                    fontFamilyFallback: const [
-                                      'monospace'
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        // Editor
-                        Expanded(
-                          child: TextField(
-                            controller: _text,
-                            focusNode: _focus,
-                            scrollController: _mainScroll,
-                            autofocus: true,
-                            expands: true,
-                            maxLines: null,
-                            onChanged: (_) => setState(() {}),
-                            style: const TextStyle(
-                              fontSize: 14,
-                              height: 1.5,
-                              fontFamily: 'Roboto Mono',
-                              fontFamilyFallback: ['monospace'],
-                            ),
-                            decoration: const InputDecoration(
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.all(10),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                child: _preview == PreviewMode.edit
+                    ? _editorBox(context)
+                    : _previewBox(context),
               ),
               _hintBar(context),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // --- Preview toggle + editor / preview boxes ---
+
+  Widget _previewBar(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final chars = _text.text.length;
+    final lines = _lineCount;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 2, 12, 0),
+      child: Row(
+        children: [
+          PreviewSegments(
+            value: _preview,
+            fontSize: 11,
+            onChanged: (m) => setState(() {
+              _preview = m;
+              if (_preview != PreviewMode.edit) {
+                _showFind = false;
+                _focus.unfocus();
+              } else {
+                _focus.requestFocus();
+              }
+            }),
+          ),
+          const Spacer(),
+          Text(
+            '$lines lines · $chars chars',
+            style: TextStyle(
+              fontSize: 11,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _editorBox(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: scheme.outlineVariant,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Gutter
+            Container(
+              width: 44,
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest
+                    .withValues(alpha: 0.5),
+                border: Border(
+                  right:
+                      BorderSide(color: scheme.outlineVariant),
+                ),
+              ),
+              child: ListView.builder(
+                controller: _gutterScroll,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(top: 10),
+                itemCount: _lineCount,
+                itemBuilder: (_, i) => SizedBox(
+                  height: 21,
+                  child: Center(
+                    child: Text(
+                      '${i + 1}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.onSurfaceVariant,
+                        fontFamily: 'Roboto Mono',
+                        fontFamilyFallback: const ['monospace'],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Editor
+            Expanded(
+              child: TextField(
+                controller: _text,
+                focusNode: _focus,
+                scrollController: _mainScroll,
+                autofocus: true,
+                expands: true,
+                maxLines: null,
+                onChanged: (_) => setState(() {}),
+                style: const TextStyle(
+                  fontSize: 14,
+                  height: 1.5,
+                  fontFamily: 'Roboto Mono',
+                  fontFamilyFallback: ['monospace'],
+                ),
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.all(10),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _previewBox(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+      padding: const EdgeInsets.all(14),
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: scheme.primary.withValues(alpha: 0.3),
+        ),
+      ),
+      child: SingleChildScrollView(
+        child: _preview == PreviewMode.md
+            ? MarkdownBody(
+                data: _text.text.isEmpty
+                    ? '_nothing to preview_'
+                    : _text.text,
+                styleSheet: MarkdownStyleSheet.fromTheme(
+                        Theme.of(context))
+                    .copyWith(
+                  code: const TextStyle(
+                    fontFamily: 'Roboto Mono',
+                    fontFamilyFallback: ['monospace'],
+                    fontSize: 13,
+                  ),
+                ),
+                onTapText: () {},
+              )
+            : HtmlWidget(
+                _text.text.isEmpty
+                    ? '<i>nothing to preview</i>'
+                    : _text.text,
+                textStyle: TextStyle(
+                  fontSize: 14,
+                  color: scheme.onSurface,
+                ),
+              ),
       ),
     );
   }
