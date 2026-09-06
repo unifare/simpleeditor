@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/theme_provider.dart';
 import '../services/storage_service.dart';
+import 'fullscreen_editor.dart';
 
 const Map<String, String> kLanguages = {
   'text': 'Text',
@@ -170,6 +171,30 @@ class _FeedScreenState extends State<FeedScreen> {
   void _cancelEdit() {
     setState(() => _editingId = null);
     _input.clear();
+  }
+
+  /// Open the fullscreen studio; apply its result (draft or send).
+  Future<void> _openFullscreen() async {
+    final result =
+        await Navigator.of(context).push<FullscreenResult>(
+      MaterialPageRoute(
+        builder: (_) => FullscreenEditorPage(
+          initialText: _input.text,
+          lang: _lang,
+        ),
+      ),
+    );
+    if (!mounted || result == null) return;
+    setState(() {
+      _lang = result.lang;
+      _preview = PreviewMode.edit;
+    });
+    _input.text = result.text;
+    if (result.send) {
+      await _send();
+    } else {
+      _inputFocus.requestFocus();
+    }
   }
 
   // --- Markdown snippet helpers (operate on selection) ---
@@ -650,6 +675,8 @@ class _FeedScreenState extends State<FeedScreen> {
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
+                _mdIconBtn(context, Icons.open_in_full_rounded,
+                    _openFullscreen),
                 _mdBtn(context, 'B', FontWeight.w900,
                     () => _wrap('**', '**')),
                 _mdBtn(context, 'I', FontWeight.w400,
