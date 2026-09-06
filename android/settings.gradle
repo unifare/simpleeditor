@@ -1,2 +1,0 @@
-include ':app'
-setBinding(new Binding([gradle: new org.gradle.api.internal.provider.DefaultProviderFactory()]))

@@ -1,0 +1,41 @@
+name: iOS unsigned IPA
+
+# No Apple Developer account: builds an UNSIGNED release IPA in the cloud.
+# Install it on your own iPhone with Sideloadly / AltStore (free Apple ID,
+# re-sign every 7 days) or TrollStore (if your iOS version is supported).
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'ios/**'
+      - '.github/workflows/ios-unsigned.yml'
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.47.2'
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Build unsigned IPA
+        run: flutter build ipa --release --no-codesign
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: notepad-unsigned-ipa
+          path: build/ios/ipa/*.ipa
+          if-no-files-found: error
